@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  client
+  producer
+  admin
+}
+
+enum EventStatus {
+  PLAYLIST_PENDING
+  AWAITING_ASSIGNMENT
+  ASSIGNED
+  MIXING
+  PREVIEW_READY
+  REVISION_REQUESTED
+  FINAL_DELIVERED
+  DISPUTE
+  PAYOUT_ELIGIBLE
+  PAID_OUT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String?
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(client)
+  createdAt    DateTime @default(now())
+
+  producerProfile ProducerProfile?
+  clientEvents    Event[]           @relation("ClientEvents")
+  assignedEvents  Event[]           @relation("AssignedProducerEvents")
+}
+
+model ProducerProfile {
+  id                     String   @id @default(cuid())
+  userId                 String   @unique
+  isActive               Boolean  @default(true)
+  vibeTags               String[]
+  stripeConnectAccountId String?
+  createdAt              DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Event {
+  id                String      @id @default(cuid())
+  clientId          String
+  eventType         String
+  eventDate         DateTime
+  durationHours     Int
+  vibeTags          String[]
+  status            EventStatus @default(PLAYLIST_PENDING)
+  assignedProducerId String?
+  createdAt         DateTime    @default(now())
+
+  client           User   @relation("ClientEvents", fields: [clientId], references: [id], onDelete: Cascade)
+  assignedProducer User?  @relation("AssignedProducerEvents", fields: [assignedProducerId], references: [id])
+
+  details EventDetail[]
+  order   Order?
+  mix     Mix?
+}
+
+model EventDetail {
+  id      String @id @default(cuid())
+  eventId String
+  key     String
+  value   String
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@unique([eventId, key])
+}
+
+model Order {
+  id                    String   @id @default(cuid())
+  eventId               String   @unique
+  stripeSessionId       String   @unique
+  stripePaymentIntentId String?
+  totalAmountCents      Int
+  platformFeeCents      Int
+  producerPayoutCents   Int
+  paymentStatus         String
+  createdAt             DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Mix {
+  id           String   @id @default(cuid())
+  eventId      String   @unique
+  previewPath  String?
+  finalPath    String?
+  revisionNotes String?
+  createdAt    DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
