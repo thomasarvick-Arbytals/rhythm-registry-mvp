@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 declare global {
-  // eslint-disable-next-line no-var
+  // Using `var` on purpose to merge with Node global type.
   var prisma: PrismaClient | undefined;
 }
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import bcrypt from 'bcrypt';
+import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import { assignProducerToEvent } from '@/lib/assignment';
@@ -13,21 +14,22 @@ export async function POST(req: Request) {
   if (!sig || !webhookSecret) return new NextResponse('Missing stripe signature/secret', { status: 400 });
 
   const rawBody = await req.text();
-  let event;
+  let event: Stripe.Event;
   try {
     const stripe = getStripe();
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-  } catch (err: any) {
-    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return new NextResponse(`Webhook Error: ${msg}`, { status: 400 });
   }
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as any;
+    const session = event.data.object as Stripe.Checkout.Session;
 
     const email = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();
     if (!email) return new NextResponse('No customer email', { status: 400 });
 
-    const md = session.metadata || {};
+    const md: Record<string, string> = session.metadata ?? {};
     const eventType = md.eventType || 'Unknown';
     const eventDate = md.eventDate ? new Date(md.eventDate) : new Date();
     const durationHours = Number(md.durationHours || 2);
@@ -40,8 +42,8 @@ export async function POST(req: Request) {
     const platformFeeCents = Number(md.platformFeeCents || Math.round(totalAmountCents * 0.3));
     const producerPayoutCents = Number(md.producerPayoutCents || totalAmountCents - platformFeeCents);
 
-    const stripeSessionId = session.id as string;
-    const stripePaymentIntentId = session.payment_intent as string | undefined;
+    const stripeSessionId = session.id;
+    const stripePaymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : undefined;
 
     const existingOrder = await prisma.order.findUnique({ where: { stripeSessionId } });
     if (existingOrder) return NextResponse.json({ received: true, deduped: true });

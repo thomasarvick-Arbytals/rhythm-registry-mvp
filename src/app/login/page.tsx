@@ -26,7 +26,7 @@ export default function LoginPage() {
             redirect: true,
             callbackUrl: '/router',
           });
-          if ((res as any)?.error) setError('Invalid email or password');
+          if (res?.error) setError('Invalid email or password');
           setLoading(false);
         }}
       >
