@@ -113,6 +113,37 @@ export default async function ClientAppHome() {
       <div className="mt-6 rounded border p-4 text-sm text-neutral-600">
         Note: DJs have no direct contact with clients. Change requests are admin-reviewed.
       </div>
+
+      <div className="mt-6 rounded border p-4">
+        <div className="font-medium">Request changes</div>
+        <p className="mt-1 text-sm text-neutral-600">Submit a change request for a job (goes to admin for approval).</p>
+
+        {events.length > 0 ? (
+          <form className="mt-3 space-y-3" action="/api/client/change-request" method="post">
+            <label className="block">
+              <div className="text-sm font-medium">Job</div>
+              <select className="mt-1 w-full rounded border px-3 py-2" name="eventId">
+                {events.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.id.slice(0, 8).toUpperCase()} — {e.eventType} ({new Date(e.eventDate).toLocaleDateString()})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <div className="text-sm font-medium">What needs adjusting?</div>
+              <textarea className="mt-1 w-full rounded border p-2" name="message" rows={4} placeholder="Describe the changes you want…" />
+            </label>
+
+            <button className="rounded bg-black px-4 py-2 text-white" type="submit">
+              Submit change request
+            </button>
+          </form>
+        ) : (
+          <div className="mt-3 text-sm text-neutral-600">No jobs available.</div>
+        )}
+      </div>
     </main>
   );
 }

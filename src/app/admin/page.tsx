@@ -22,6 +22,10 @@ export default async function AdminHome() {
           <div className="font-medium">Jobs</div>
           <div className="text-sm text-neutral-600">Monitor jobs & reassignment</div>
         </Link>
+        <Link className="rounded border p-4 hover:bg-neutral-50" href="/admin/change-requests">
+          <div className="font-medium">Change Requests</div>
+          <div className="text-sm text-neutral-600">Approve or reject client change requests</div>
+        </Link>
       </div>
     </main>
   );
