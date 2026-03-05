@@ -58,6 +58,11 @@ export default async function DjJobDetailPage({ params }: { params: Promise<{ id
             <input type="hidden" name="action" value="wip" />
             <button className="rounded bg-black px-3 py-1 text-white" type="submit">Set In Progress</button>
           </form>
+
+          <a className="rounded border px-3 py-1 hover:bg-neutral-50" href={`/dj/jobs/${job.id}/upload`}>
+            Upload mix + chapters
+          </a>
+
           <form action="/api/dj/progress" method="post">
             <input type="hidden" name="eventId" value={job.id} />
             <input type="hidden" name="action" value="awaiting_preview" />
