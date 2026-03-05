@@ -42,7 +42,7 @@ model User {
 model ProducerProfile {
   id                     String   @id @default(cuid())
   userId                 String   @unique
-  isActive               Boolean  @default(true)
+  isActive               Boolean  @default(false)
   vibeTags               String[]
   stripeConnectAccountId String?
   createdAt              DateTime @default(now())
