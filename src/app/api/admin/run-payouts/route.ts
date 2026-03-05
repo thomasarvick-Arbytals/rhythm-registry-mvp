@@ -25,7 +25,7 @@ export async function POST() {
     select: { eventId: true },
   });
 
-  const eventIds = approved.map((a: { eventId: string }) => a.eventId);
+  const eventIds = approved.map((a) => a.eventId);
   if (eventIds.length === 0) return NextResponse.json({ ok: true, processed: 0 });
 
   const events = await prisma.event.findMany({
@@ -40,7 +40,7 @@ export async function POST() {
   });
 
   let processed = 0;
-  const errors: any[] = [];
+  const errors: Array<{ eventId: string; error: string }> = [];
 
   for (const ev of events) {
     try {
@@ -60,8 +60,9 @@ export async function POST() {
 
       await prisma.event.update({ where: { id: ev.id }, data: { status: 'PAID_OUT' } });
       processed += 1;
-    } catch (e: any) {
-      errors.push({ eventId: ev.id, error: e?.message ?? String(e) });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      errors.push({ eventId: ev.id, error: msg });
     }
   }
 
