@@ -1,9 +1,9 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 
-export default function ResetPasswordPage() {
+function ResetPasswordInner() {
   const params = useSearchParams();
   const router = useRouter();
 
@@ -19,7 +19,10 @@ export default function ResetPasswordPage() {
 
       {done ? (
         <div className="mt-6 rounded border bg-green-50 p-3 text-sm">
-          Password updated. <button className="underline" onClick={() => router.push('/login')}>Go to login</button>
+          Password updated.{' '}
+          <button className="underline" onClick={() => router.push('/login')}>
+            Go to login
+          </button>
         </div>
       ) : (
         <form
@@ -39,15 +42,20 @@ export default function ResetPasswordPage() {
             setDone(true);
           }}
         >
-          <input type="hidden" value={token} />
-
           <label className="block">
             <div className="text-sm font-medium">New password</div>
-            <input className="mt-1 w-full rounded border px-3 py-2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input
+              className="mt-1 w-full rounded border px-3 py-2"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             <div className="mt-1 text-xs text-neutral-600">Minimum 8 characters.</div>
           </label>
 
-          {error ? <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</div> : null}
+          {error ? (
+            <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</div>
+          ) : null}
 
           <button className="w-full rounded bg-black px-4 py-2 text-white" type="submit">
             Reset password
@@ -61,5 +69,13 @@ export default function ResetPasswordPage() {
         </div>
       ) : null}
     </main>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordInner />
+    </Suspense>
   );
 }
