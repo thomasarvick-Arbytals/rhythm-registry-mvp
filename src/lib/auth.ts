@@ -3,6 +3,8 @@ import bcrypt from 'bcrypt';
 import { prisma } from '@/lib/prisma';
 
 export const authOptions = {
+  // Explicit secret avoids NextAuth "Configuration" errors when env lookup is flaky.
+  secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: 'jwt' },
   providers: [
     CredentialsProvider({
@@ -39,7 +41,10 @@ export const authOptions = {
   ],
   pages: {
     signIn: '/login',
+    error: '/login',
   },
+  debug: process.env.NODE_ENV !== 'production',
+  trustHost: true,
   callbacks: {
     async jwt({ token, user }: any) {
       if (user) {
