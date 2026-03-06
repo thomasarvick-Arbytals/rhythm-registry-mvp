@@ -90,9 +90,18 @@ model Order {
   platformFeeCents      Int
   producerPayoutCents   Int
   paymentStatus         String
+  couponCode            String?
   createdAt             DateTime @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model Coupon {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  percentOff Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
 }
 
 model Mix {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getStorage } from '@/lib/storage';
@@ -8,7 +8,7 @@ import fs from 'node:fs/promises';
 export const runtime = 'nodejs';
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string; kind: string }> }) {
-  const session = await getServerSession(authOptions);
+  const session = (await getServerSession(authOptions as any)) as { user?: { id?: string; role?: string; email?: string } } | null;
   if (!session?.user) return new NextResponse('Unauthorized', { status: 401 });
 
   const { id, kind } = await ctx.params;

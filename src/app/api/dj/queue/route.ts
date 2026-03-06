@@ -1,16 +1,15 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 export const runtime = 'nodejs';
 
 // Pending job = accepted but not completed.
-// We treat an event as pending for a DJ if assignedProducerId = DJ and status != COMPLETED/PAID_OUT.
-const NOT_PENDING_STATUSES = new Set(['PAID_OUT']);
+// Pending count uses: assignedProducerId = DJ and status != PAID_OUT.
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
+  const session = (await getServerSession(authOptions as any)) as { user?: { id?: string; role?: string; email?: string } } | null;
   if (!session?.user) return new NextResponse('Unauthorized', { status: 401 });
   if (session.user.role !== 'dj') return new NextResponse('Forbidden', { status: 403 });
 
@@ -22,7 +21,7 @@ export async function GET() {
   const pendingCount = await prisma.event.count({
     where: {
       assignedProducerId: session.user.id,
-      NOT: { status: { in: Array.from(NOT_PENDING_STATUSES) } },
+      NOT: { status: 'PAID_OUT' },
     },
   });
 
