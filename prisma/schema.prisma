@@ -34,9 +34,10 @@ model User {
   role         Role     @default(client)
   createdAt    DateTime @default(now())
 
-  producerProfile ProducerProfile?
-  clientEvents    Event[]           @relation("ClientEvents")
-  assignedEvents  Event[]           @relation("AssignedProducerEvents")
+  producerProfile    ProducerProfile?
+  clientEvents       Event[]              @relation("ClientEvents")
+  assignedEvents     Event[]              @relation("AssignedProducerEvents")
+  PasswordResetToken PasswordResetToken[]
 }
 
 model ProducerProfile {
@@ -51,18 +52,18 @@ model ProducerProfile {
 }
 
 model Event {
-  id                String      @id @default(cuid())
-  clientId          String
-  eventType         String
-  eventDate         DateTime
-  durationHours     Int
-  vibeTags          String[]
-  status            EventStatus @default(PLAYLIST_PENDING)
+  id                 String      @id @default(cuid())
+  clientId           String
+  eventType          String
+  eventDate          DateTime
+  durationHours      Int
+  vibeTags           String[]
+  status             EventStatus @default(PLAYLIST_PENDING)
   assignedProducerId String?
-  createdAt         DateTime    @default(now())
+  createdAt          DateTime    @default(now())
 
-  client           User   @relation("ClientEvents", fields: [clientId], references: [id], onDelete: Cascade)
-  assignedProducer User?  @relation("AssignedProducerEvents", fields: [assignedProducerId], references: [id])
+  client           User  @relation("ClientEvents", fields: [clientId], references: [id], onDelete: Cascade)
+  assignedProducer User? @relation("AssignedProducerEvents", fields: [assignedProducerId], references: [id])
 
   details EventDetail[]
   order   Order?
@@ -77,8 +78,8 @@ model EventDetail {
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  @@index([eventId])
   @@unique([eventId, key])
+  @@index([eventId])
 }
 
 model Order {
@@ -105,12 +106,12 @@ model Coupon {
 }
 
 model PasswordResetToken {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
-  tokenHash   String   @unique
+  tokenHash   String    @unique
   requestedIp String?
   userAgent   String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   expiresAt   DateTime
   usedAt      DateTime?
 
@@ -121,12 +122,12 @@ model PasswordResetToken {
 }
 
 model Mix {
-  id           String   @id @default(cuid())
-  eventId      String   @unique
-  previewPath  String?
-  finalPath    String?
+  id            String   @id @default(cuid())
+  eventId       String   @unique
+  previewPath   String?
+  finalPath     String?
   revisionNotes String?
-  createdAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
