@@ -104,6 +104,22 @@ model Coupon {
   createdAt  DateTime @default(now())
 }
 
+model PasswordResetToken {
+  id          String   @id @default(cuid())
+  userId      String
+  tokenHash   String   @unique
+  requestedIp String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+  usedAt      DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
 model Mix {
   id           String   @id @default(cuid())
   eventId      String   @unique

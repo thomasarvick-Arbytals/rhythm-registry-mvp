@@ -16,7 +16,7 @@ export default function LoginPage() {
   return (
     <main className="mx-auto max-w-md px-6 py-16">
       <h1 className="text-2xl font-semibold">Log in</h1>
-      <p className="mt-2 text-sm text-neutral-600">Log in, or create an account below.</p>
+      <p className="mt-2 text-sm text-neutral-600">Log in, create an account, or reset your password.</p>
 
       <div className="mt-6 flex gap-2">
         <button
@@ -67,6 +67,11 @@ export default function LoginPage() {
           }
         }}
       >
+        {mode === 'login' ? (
+          <div className="text-right">
+            <a className="text-sm underline" href="/forgot-password">Forgot password?</a>
+          </div>
+        ) : null}
         {mode === 'signup' ? (
           <label className="block">
             <div className="text-sm font-medium">Name</div>
