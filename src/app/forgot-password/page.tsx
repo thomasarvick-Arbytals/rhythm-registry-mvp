@@ -25,10 +25,16 @@ export default function ForgotPasswordPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email }),
             });
+
             if (!res.ok) {
-              setError(await res.text());
+              const msg = await res
+                .json()
+                .then((j) => (typeof j?.error === 'string' ? j.error : JSON.stringify(j)))
+                .catch(async () => await res.text());
+              setError(msg || 'Something went wrong.');
               return;
             }
+
             setSent(true);
           }}
         >
