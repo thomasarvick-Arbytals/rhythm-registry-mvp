@@ -36,7 +36,16 @@ function ResetPasswordInner() {
               body: JSON.stringify({ token, password }),
             });
             if (!res.ok) {
-              setError(await res.text());
+              const msg = await res
+                .json()
+                .then((j: unknown) => {
+                  if (j && typeof j === 'object' && 'error' in j && typeof (j as { error?: unknown }).error === 'string') {
+                    return (j as { error: string }).error;
+                  }
+                  return JSON.stringify(j);
+                })
+                .catch(async () => await res.text());
+              setError(msg || 'Something went wrong.');
               return;
             }
             setDone(true);

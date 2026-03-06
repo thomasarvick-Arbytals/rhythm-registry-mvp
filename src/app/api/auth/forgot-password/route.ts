@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { normalizeEmail } from '@/lib/roles';
 import { getResend } from '@/lib/email';
-import { hashToken, newRawToken } from '@/lib/reset-token';
+import { signResetToken } from '@/lib/reset-jwt';
 
 export const runtime = 'nodejs';
 
@@ -65,23 +65,17 @@ export async function POST(req: Request) {
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return okResponse;
 
-  // Rate limit
-  const allowed = await withinRateLimit({ email, ip });
-  if (!allowed) return okResponse;
+  // Rate limit (best-effort). If the DB doesn't have the reset-token table yet,
+  // do not block email sending in MVP.
+  try {
+    const allowed = await withinRateLimit({ email, ip });
+    if (!allowed) return okResponse;
+  } catch {
+    // ignore
+  }
 
-  const raw = newRawToken();
-  const tokenHash = hashToken(raw);
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-
-  await prisma.passwordResetToken.create({
-    data: {
-      userId: user.id,
-      tokenHash,
-      requestedIp: ip,
-      userAgent: ua,
-      expiresAt,
-    },
-  });
+  // Stateless reset token (JWT) so we don't depend on DB migrations.
+  const raw = await signResetToken({ userId: user.id }, 60 * 60);
 
   // Determine base URL for links.
   const xfProto = req.headers.get('x-forwarded-proto');

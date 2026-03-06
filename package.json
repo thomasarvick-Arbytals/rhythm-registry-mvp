@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate --schema=prisma/schema.prisma && node tools/run-migrate-if-vercel.js && next build",
+    "build": "prisma generate --schema=prisma/schema.prisma && next build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate --schema=prisma/schema.prisma"
@@ -12,6 +12,7 @@
   "dependencies": {
     "@prisma/client": "^6.6.0",
     "bcrypt": "^6.0.0",
+    "jose": "^5.10.0",
     "next": "16.1.6",
     "next-auth": "^4.24.13",
     "prisma": "^6.6.0",
