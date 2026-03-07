@@ -18,8 +18,14 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const json = await req.json();
-  const body = BodySchema.parse(json);
+  let body: z.infer<typeof BodySchema>;
+  try {
+    const json = await req.json();
+    body = BodySchema.parse(json);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: `Invalid request: ${msg}` }, { status: 400 });
+  }
 
   // Coupon handling:
   // We let Stripe handle promotion codes at checkout (allow_promotion_codes: true).
@@ -34,7 +40,17 @@ export async function POST(req: Request) {
   // If a coupon code is provided, first check our internal coupons table (admin-created).
   // If it results in 100% off, we bypass Stripe entirely and treat it as paid.
   if (couponCode) {
-    const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
+    let coupon: { percentOff: number; isActive: boolean } | null = null;
+    try {
+      coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return NextResponse.json(
+        { ok: false, error: `Coupon lookup failed (DB not ready): ${msg}` },
+        { status: 500 }
+      );
+    }
+
     if (!coupon || !coupon.isActive) {
       return NextResponse.json({ ok: false, error: 'Invalid coupon code.' }, { status: 400 });
     }
@@ -47,37 +63,49 @@ export async function POST(req: Request) {
       const tempPassword = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : require('crypto').randomUUID();
       const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-      const user = await prisma.user.upsert({
-        where: { email },
-        update: { name: body.name || undefined },
-        create: { email, name: body.name || null, passwordHash, role: 'client' },
-      });
+      let user;
+      try {
+        user = await prisma.user.upsert({
+          where: { email },
+          update: { name: body.name || undefined },
+          create: { email, name: body.name || null, passwordHash, role: 'client' },
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return NextResponse.json({ ok: false, error: `User upsert failed: ${msg}` }, { status: 500 });
+      }
 
       const uuid = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : require('crypto').randomUUID();
       const stripeSessionId = `coupon_${Date.now()}_${uuid}`;
 
-      const created = await prisma.event.create({
-        data: {
-          clientId: user.id,
-          eventType: body.eventType,
-          eventDate: new Date(body.eventDate),
-          durationHours: body.durationHours,
-          vibeTags: body.vibeTags,
-          status: 'AWAITING_ASSIGNMENT',
-          order: {
-            create: {
-              stripeSessionId,
-              totalAmountCents: 0,
-              platformFeeCents: 0,
-              producerPayoutCents: 0,
-              paymentStatus: 'paid',
-              couponCode,
+      let created: { id: string };
+      try {
+        created = await prisma.event.create({
+          data: {
+            clientId: user.id,
+            eventType: body.eventType,
+            eventDate: new Date(body.eventDate),
+            durationHours: body.durationHours,
+            vibeTags: body.vibeTags,
+            status: 'AWAITING_ASSIGNMENT',
+            order: {
+              create: {
+                stripeSessionId,
+                totalAmountCents: 0,
+                platformFeeCents: 0,
+                producerPayoutCents: 0,
+                paymentStatus: 'paid',
+                couponCode,
+              },
             },
+            mix: { create: {} },
           },
-          mix: { create: {} },
-        },
-        select: { id: true },
-      });
+          select: { id: true },
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return NextResponse.json({ ok: false, error: `Event create failed: ${msg}` }, { status: 500 });
+      }
 
       // Best-effort assignment
       try {
@@ -90,7 +118,13 @@ export async function POST(req: Request) {
     }
   }
 
-  const stripe = getStripe();
+  let stripe;
+  try {
+    stripe = getStripe();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: `Stripe not configured: ${msg}` }, { status: 500 });
+  }
 
   // Non-free checkouts go through Stripe. If you created a Stripe Promotion Code that matches
   // the coupon code, we'll auto-apply it.
