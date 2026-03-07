@@ -55,10 +55,17 @@ export default function LoginPage() {
             const res2 = await signIn('credentials', {
               email,
               password,
-              redirect: true,
+              redirect: false,
               callbackUrl: '/router',
             });
-            if (res2?.error) setError('Invalid email or password');
+
+            if (res2?.error) {
+              setError('Invalid email or password');
+              return;
+            }
+
+            // NextAuth won't navigate when redirect=false, so do it ourselves.
+            window.location.href = res2?.url || '/router';
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             setError(msg);
