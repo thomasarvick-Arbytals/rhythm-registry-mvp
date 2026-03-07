@@ -6,6 +6,8 @@ import { assignProducerToEvent } from '@/lib/assignment';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 
+export const runtime = 'nodejs';
+
 const BodySchema = z.object({
   eventType: z.string().min(1),
   eventDate: z.string().min(1), // ISO
@@ -18,14 +20,15 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  let body: z.infer<typeof BodySchema>;
   try {
-    const json = await req.json();
-    body = BodySchema.parse(json);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ ok: false, error: `Invalid request: ${msg}` }, { status: 400 });
-  }
+    let body: z.infer<typeof BodySchema>;
+    try {
+      const json = await req.json();
+      body = BodySchema.parse(json);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return NextResponse.json({ ok: false, error: `Invalid request: ${msg}` }, { status: 400 });
+    }
 
   // Coupon handling:
   // We let Stripe handle promotion codes at checkout (allow_promotion_codes: true).
@@ -168,4 +171,8 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json({ id: session.id, url: session.url });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: `Checkout failed: ${msg}` }, { status: 500 });
+  }
 }
