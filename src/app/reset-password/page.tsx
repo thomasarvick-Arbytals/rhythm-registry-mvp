@@ -1,6 +1,7 @@
 'use client';
 
-import { useSearchParams, useRouter } from 'next/navigation';
+import { Field, Input, Notice, PrimaryButton, PublicShell } from '@/components/ui/PublicShell';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useMemo, useState } from 'react';
 
 function ResetPasswordInner() {
@@ -13,20 +14,17 @@ function ResetPasswordInner() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
-      <h1 className="text-2xl font-semibold">Reset password</h1>
-      <p className="mt-2 text-sm text-neutral-600">Set a new password for your account.</p>
-
+    <PublicShell title="Reset password" subtitle="Set a new password for your account.">
       {done ? (
-        <div className="mt-6 rounded border bg-green-50 p-3 text-sm">
+        <Notice variant="info">
           Password updated.{' '}
           <button className="underline" onClick={() => router.push('/login')}>
             Go to login
           </button>
-        </div>
+        </Notice>
       ) : (
         <form
-          className="mt-6 space-y-4"
+          className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
             setError(null);
@@ -51,33 +49,18 @@ function ResetPasswordInner() {
             setDone(true);
           }}
         >
-          <label className="block">
-            <div className="text-sm font-medium">New password</div>
-            <input
-              className="mt-1 w-full rounded border px-3 py-2"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <div className="mt-1 text-xs text-neutral-600">Minimum 8 characters.</div>
-          </label>
+          <Field label="New password" hint="Minimum 8 characters.">
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
 
-          {error ? (
-            <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</div>
-          ) : null}
+          {error ? <Notice>{error}</Notice> : null}
 
-          <button className="w-full rounded bg-black px-4 py-2 text-white" type="submit">
-            Reset password
-          </button>
+          <PrimaryButton>Reset password</PrimaryButton>
         </form>
       )}
 
-      {!token ? (
-        <div className="mt-6 rounded border border-yellow-200 bg-yellow-50 p-3 text-sm">
-          Missing reset token. Use the link from your email.
-        </div>
-      ) : null}
-    </main>
+      {!token ? <Notice>Missing reset token. Use the link from your email.</Notice> : null}
+    </PublicShell>
   );
 }
 

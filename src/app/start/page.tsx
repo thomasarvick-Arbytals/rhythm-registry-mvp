@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { Field, Input, Notice, PrimaryButton, PublicShell, Select } from '@/components/ui/PublicShell';
 
 const durationOptions = [2, 3, 4, 5, 6] as const;
 
@@ -25,12 +26,9 @@ export default function StartPage() {
   const price = useMemo(() => computeDisplayPrice(durationHours, rush), [durationHours, rush]);
 
   return (
-    <main className="mx-auto max-w-2xl px-6 py-16">
-      <h1 className="text-3xl font-semibold">Start your event</h1>
-      <p className="mt-2 text-neutral-600">Answer a few questions, then check out.</p>
-
+    <PublicShell title="Start your event" subtitle="Answer a few questions, then check out.">
       <form
-        className="mt-10 space-y-5"
+        className="space-y-5"
         onSubmit={async (e) => {
           e.preventDefault();
           setLoading(true);
@@ -76,79 +74,55 @@ export default function StartPage() {
         }}
       >
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="block">
-            <div className="text-sm font-medium">Event type</div>
-            <input className="mt-1 w-full rounded border px-3 py-2" value={eventType} onChange={(e) => setEventType(e.target.value)} />
-          </label>
-          <label className="block">
-            <div className="text-sm font-medium">Event date</div>
-            <input className="mt-1 w-full rounded border px-3 py-2" type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
-          </label>
+          <Field label="Event type">
+            <Input value={eventType} onChange={(e) => setEventType(e.target.value)} />
+          </Field>
+          <Field label="Event date">
+            <Input type="date" value={eventDate} onChange={(e) => setEventDate(e.target.value)} />
+          </Field>
         </div>
 
-        <label className="block">
-          <div className="text-sm font-medium">Duration</div>
-          <select
-            className="mt-1 w-full rounded border px-3 py-2"
-            value={durationHours}
-            onChange={(e) => setDurationHours(Number(e.target.value))}
-          >
+        <Field label="Duration">
+          <Select value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value))}>
             {durationOptions.map((h) => (
               <option key={h} value={h}>
                 {h} hours
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
 
-        <label className="block">
-          <div className="text-sm font-medium">Vibe tags (comma separated)</div>
-          <input className="mt-1 w-full rounded border px-3 py-2" value={vibeTags} onChange={(e) => setVibeTags(e.target.value)} />
-          <div className="mt-1 text-xs text-neutral-500">Examples: afrobeats, soul, gospel, chill, high-energy</div>
-        </label>
+        <Field label="Vibe tags (comma separated)" hint="Examples: afrobeats, soul, gospel, chill, high-energy">
+          <Input value={vibeTags} onChange={(e) => setVibeTags(e.target.value)} />
+        </Field>
 
-        <label className="flex items-center gap-2">
-          <input type="checkbox" checked={rush} onChange={(e) => setRush(e.target.checked)} />
-          <span className="text-sm">Rush delivery (+$200)</span>
+        <label className="flex items-center gap-2 text-sm">
+          <input className="h-4 w-4" type="checkbox" checked={rush} onChange={(e) => setRush(e.target.checked)} />
+          <span>Rush delivery (+$200)</span>
         </label>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <label className="block">
-            <div className="text-sm font-medium">Your name</div>
-            <input className="mt-1 w-full rounded border px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <label className="block">
-            <div className="text-sm font-medium">Email</div>
-            <input className="mt-1 w-full rounded border px-3 py-2" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </label>
+          <Field label="Your name">
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Field label="Email">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </Field>
         </div>
 
-        <label className="block">
-          <div className="text-sm font-medium">Coupon code (optional)</div>
-          <input
-            className="mt-1 w-full rounded border px-3 py-2"
-            value={couponCode}
-            onChange={(e) => setCouponCode(e.target.value)}
-            placeholder="e.g. TESTING"
-          />
-          <div className="mt-1 text-xs text-neutral-500">Promo codes can also be entered on the Stripe checkout page.</div>
-        </label>
+        <Field label="Coupon code (optional)" hint="Promo codes can also be entered on the Stripe checkout page.">
+          <Input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="e.g. TESTING" />
+        </Field>
 
-        <div className="rounded border bg-neutral-50 p-4">
-          <div className="text-sm text-neutral-600">Recommended price</div>
+        <div className="rounded-xl border border-white/10 bg-[rgba(15,19,32,.55)] p-4">
+          <div className="text-sm text-[#aab1c6]">Recommended price</div>
           <div className="text-2xl font-semibold">${price}</div>
         </div>
 
-        {error ? <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</div> : null}
+        {error ? <Notice>{error}</Notice> : null}
 
-        <button
-          disabled={loading}
-          className="w-full rounded bg-black px-4 py-3 text-white disabled:opacity-60"
-          type="submit"
-        >
-          {loading ? 'Redirecting…' : 'Continue to Checkout'}
-        </button>
+        <PrimaryButton disabled={loading}>{loading ? 'Redirecting…' : 'Continue to Checkout'}</PrimaryButton>
       </form>
-    </main>
+    </PublicShell>
   );
 }

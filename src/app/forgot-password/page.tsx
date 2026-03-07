@@ -1,5 +1,6 @@
 'use client';
 
+import { Field, Input, Notice, PrimaryButton, PublicShell } from '@/components/ui/PublicShell';
 import { useState } from 'react';
 
 export default function ForgotPasswordPage() {
@@ -8,15 +9,12 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
-      <h1 className="text-2xl font-semibold">Forgot password</h1>
-      <p className="mt-2 text-sm text-neutral-600">We’ll email you a password reset link.</p>
-
+    <PublicShell title="Forgot password" subtitle="We’ll email you a password reset link.">
       {sent ? (
-        <div className="mt-6 rounded border bg-green-50 p-3 text-sm">If an account exists for that email, a reset link has been sent.</div>
+        <Notice variant="info">If an account exists for that email, a reset link has been sent.</Notice>
       ) : (
         <form
-          className="mt-6 space-y-4"
+          className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault();
             setError(null);
@@ -49,18 +47,15 @@ export default function ForgotPasswordPage() {
             setSent(true);
           }}
         >
-          <label className="block">
-            <div className="text-sm font-medium">Email</div>
-            <input className="mt-1 w-full rounded border px-3 py-2" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </label>
+          <Field label="Email">
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </Field>
 
-          {error ? <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</div> : null}
+          {error ? <Notice>{error}</Notice> : null}
 
-          <button className="w-full rounded bg-black px-4 py-2 text-white" type="submit">
-            Send reset link
-          </button>
+          <PrimaryButton>Send reset link</PrimaryButton>
         </form>
       )}
-    </main>
+    </PublicShell>
   );
 }

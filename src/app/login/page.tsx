@@ -1,5 +1,6 @@
 'use client';
 
+import { Field, Input, Notice, PrimaryButton, PublicShell, Select } from '@/components/ui/PublicShell';
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
 
@@ -14,21 +15,18 @@ export default function LoginPage() {
   const [requestedRole, setRequestedRole] = useState<'client' | 'dj'>('client');
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
-      <h1 className="text-2xl font-semibold">Log in</h1>
-      <p className="mt-2 text-sm text-neutral-600">Log in, create an account, or reset your password.</p>
-
-      <div className="mt-6 flex gap-2">
+    <PublicShell title={mode === 'signup' ? 'Create your account' : 'Log in'} subtitle="Log in, create an account, or reset your password.">
+      <div className="flex gap-2">
         <button
           type="button"
-          className={`rounded border px-3 py-1 text-sm ${mode === 'login' ? 'bg-black text-white' : ''}`}
+          className={`rounded-xl border px-3 py-2 text-sm ${mode === 'login' ? 'border-[rgba(96,165,250,.6)] bg-[rgba(96,165,250,.15)]' : 'border-white/10 bg-[rgba(15,19,32,.55)]'}`}
           onClick={() => setMode('login')}
         >
           Log in
         </button>
         <button
           type="button"
-          className={`rounded border px-3 py-1 text-sm ${mode === 'signup' ? 'bg-black text-white' : ''}`}
+          className={`rounded-xl border px-3 py-2 text-sm ${mode === 'signup' ? 'border-[rgba(96,165,250,.6)] bg-[rgba(96,165,250,.15)]' : 'border-white/10 bg-[rgba(15,19,32,.55)]'}`}
           onClick={() => setMode('signup')}
         >
           Sign up
@@ -36,7 +34,7 @@ export default function LoginPage() {
       </div>
 
       <form
-        className="mt-4 space-y-4"
+        className="mt-6 space-y-4"
         onSubmit={async (e) => {
           e.preventDefault();
           setLoading(true);
@@ -76,50 +74,39 @@ export default function LoginPage() {
       >
         {mode === 'login' ? (
           <div className="text-right">
-            <a className="text-sm underline" href="/forgot-password">Forgot password?</a>
+            <a className="text-sm text-[#aab1c6] underline hover:text-[#e9ecf5]" href="/forgot-password">
+              Forgot password?
+            </a>
           </div>
         ) : null}
+
         {mode === 'signup' ? (
-          <label className="block">
-            <div className="text-sm font-medium">Name</div>
-            <input className="mt-1 w-full rounded border px-3 py-2" value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
+          <Field label="Name">
+            <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
         ) : null}
 
         {mode === 'signup' ? (
-          <label className="block">
-            <div className="text-sm font-medium">Account type</div>
-            <select
-              className="mt-1 w-full rounded border px-3 py-2"
-              value={requestedRole}
-              onChange={(e) => setRequestedRole(e.target.value as 'client' | 'dj')}
-            >
+          <Field label="Account type" hint="Admin is allowlisted (product@ / promise@).">
+            <Select value={requestedRole} onChange={(e) => setRequestedRole(e.target.value as 'client' | 'dj')}>
               <option value="client">Client</option>
               <option value="dj">DJ</option>
-            </select>
-            <div className="mt-1 text-xs text-neutral-600">Admin is allowlisted (product@ / promise@).</div>
-          </label>
+            </Select>
+          </Field>
         ) : null}
 
-        <label className="block">
-          <div className="text-sm font-medium">Email</div>
-          <input className="mt-1 w-full rounded border px-3 py-2" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </label>
-        <label className="block">
-          <div className="text-sm font-medium">Password</div>
-          <input className="mt-1 w-full rounded border px-3 py-2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </label>
+        <Field label="Email">
+          <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
 
-        {error ? <div className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</div> : null}
+        <Field label="Password">
+          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </Field>
 
-        <button
-          disabled={loading}
-          className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-60"
-          type="submit"
-        >
-          {loading ? 'Working…' : mode === 'signup' ? 'Create account & log in' : 'Log in'}
-        </button>
+        {error ? <Notice>{error}</Notice> : null}
+
+        <PrimaryButton disabled={loading}>{loading ? 'Working…' : mode === 'signup' ? 'Create account & log in' : 'Log in'}</PrimaryButton>
       </form>
-    </main>
+    </PublicShell>
   );
 }
