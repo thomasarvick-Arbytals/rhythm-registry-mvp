@@ -26,17 +26,23 @@ export default function ForgotPasswordPage() {
               body: JSON.stringify({ email }),
             });
 
-            if (!res.ok) {
-              const msg = await res
-                .json()
-                .then((j: unknown) => {
-                  if (j && typeof j === 'object' && 'error' in j && typeof (j as { error?: unknown }).error === 'string') {
-                    return (j as { error: string }).error;
-                  }
-                  return JSON.stringify(j);
-                })
-                .catch(async () => await res.text());
-              setError(msg || 'Something went wrong.');
+            const data = await res
+              .json()
+              .catch(async () => ({ ok: false, error: await res.text() }));
+
+            if (!res.ok || !data?.ok) {
+              const msg =
+                (data && typeof data === 'object' && 'error' in data && typeof (data as { error?: unknown }).error === 'string'
+                  ? (data as { error: string }).error
+                  : '') || 'Something went wrong.';
+              setError(msg);
+              return;
+            }
+
+            // Temporary fallback: backend can return a resetUrl for internal accounts
+            if (data && typeof data === 'object' && 'resetUrl' in data && typeof (data as { resetUrl?: unknown }).resetUrl === 'string') {
+              setError(`Reset link: ${(data as { resetUrl: string }).resetUrl}`);
+              setSent(true);
               return;
             }
 

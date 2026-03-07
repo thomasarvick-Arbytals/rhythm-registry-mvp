@@ -96,8 +96,15 @@ export async function POST(req: Request) {
   const from = process.env.RESEND_FROM;
   const hasResendKey = Boolean(process.env.RESEND_API_KEY);
 
-  // If email isn't configured, surface a generic error (doesn't reveal whether the user exists).
+  // If email isn't configured, provide a temporary fallback for internal arbytals.com.au accounts
+  // so admins can unblock password resets while env is being fixed.
   if (!from || !hasResendKey) {
+    const isInternal = email.toLowerCase().endsWith('@arbytals.com.au');
+    if (isInternal) {
+      return NextResponse.json({ ok: true, resetUrl });
+    }
+
+    // Generic error for non-internal accounts.
     return NextResponse.json(
       { ok: false, error: 'Email service is not configured. Please contact support.' },
       { status: 500 }
