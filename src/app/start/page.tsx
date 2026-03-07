@@ -18,6 +18,7 @@ export default function StartPage() {
   const [rush, setRush] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [couponCode, setCouponCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +52,7 @@ export default function StartPage() {
               rush,
               name,
               email,
+              couponCode: couponCode.trim() || undefined,
             }),
           });
 
@@ -111,6 +113,17 @@ export default function StartPage() {
             <input className="mt-1 w-full rounded border px-3 py-2" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </label>
         </div>
+
+        <label className="block">
+          <div className="text-sm font-medium">Coupon code (optional)</div>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            value={couponCode}
+            onChange={(e) => setCouponCode(e.target.value)}
+            placeholder="e.g. TESTING"
+          />
+          <div className="mt-1 text-xs text-neutral-500">If you have a promo code, enter it here.</div>
+        </label>
 
         <div className="rounded border bg-neutral-50 p-4">
           <div className="text-sm text-neutral-600">Recommended price</div>
