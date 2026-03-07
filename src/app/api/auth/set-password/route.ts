@@ -11,24 +11,46 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const body = BodySchema.parse(await req.json());
+  let body: { sessionId: string; password: string };
+  try {
+    body = BodySchema.parse(await req.json());
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: `Invalid request: ${msg}` }, { status: 400 });
+  }
 
-  // Preferred path: order exists (created by webhook)
-  const order = await prisma.order.findUnique({ where: { stripeSessionId: body.sessionId } });
-  if (order) {
-    const event = await prisma.event.findUnique({ where: { id: order.eventId } });
-    if (!event) return new NextResponse('Event not found', { status: 404 });
+  // Preferred path: order exists (created by webhook or coupon bypass)
+  try {
+    const order = await prisma.order.findUnique({ where: { stripeSessionId: body.sessionId } });
+    if (order) {
+      const event = await prisma.event.findUnique({ where: { id: order.eventId } });
+      if (!event) return NextResponse.json({ ok: false, error: 'Event not found' }, { status: 404 });
 
-    const passwordHash = await bcrypt.hash(body.password, 10);
-    await prisma.user.update({ where: { id: event.clientId }, data: { passwordHash } });
+      const passwordHash = await bcrypt.hash(body.password, 10);
+      await prisma.user.update({ where: { id: event.clientId }, data: { passwordHash } });
 
-    return NextResponse.json({ ok: true, via: 'db' });
+      return NextResponse.json({ ok: true, via: 'db' });
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: `DB error: ${msg}` }, { status: 500 });
+  }
+
+  // If this is one of our internal coupon session ids, do NOT query Stripe.
+  if (body.sessionId.startsWith('coupon_')) {
+    return NextResponse.json({ ok: false, error: 'Order not found for coupon session.' }, { status: 404 });
   }
 
   // Fallback: webhook may be delayed/misconfigured. Retrieve session directly from Stripe and
   // create the missing user/event/order so the client dashboard works.
-  const stripe = getStripe();
-  const session = await stripe.checkout.sessions.retrieve(body.sessionId);
+  let session: any;
+  try {
+    const stripe = getStripe();
+    session = await stripe.checkout.sessions.retrieve(body.sessionId);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ ok: false, error: `Unable to retrieve Stripe session: ${msg}` }, { status: 400 });
+  }
 
   const email = (session.customer_details?.email || session.customer_email || '').toLowerCase().trim();
   if (!email) return new NextResponse('No customer email on session', { status: 400 });
