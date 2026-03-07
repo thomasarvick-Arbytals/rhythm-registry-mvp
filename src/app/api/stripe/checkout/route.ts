@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { computePricing } from '@/lib/pricing';
 import { getStripe } from '@/lib/stripe';
+import { prisma } from '@/lib/prisma';
+import { assignProducerToEvent } from '@/lib/assignment';
+import bcrypt from 'bcrypt';
 import { z } from 'zod';
 
 const BodySchema = z.object({
@@ -28,17 +31,72 @@ export async function POST(req: Request) {
 
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
 
+  // If a coupon code is provided, first check our internal coupons table (admin-created).
+  // If it results in 100% off, we bypass Stripe entirely and treat it as paid.
+  if (couponCode) {
+    const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
+    if (!coupon || !coupon.isActive) {
+      return NextResponse.json({ ok: false, error: 'Invalid coupon code.' }, { status: 400 });
+    }
+
+    const discounted = Math.max(0, Math.round(totalAmountCents * (1 - coupon.percentOff / 100)));
+    if (discounted === 0) {
+      const email = body.email.toLowerCase().trim();
+
+      // Create or reuse user; set a temporary password hash so they must set it on success.
+      const tempPassword = crypto.randomUUID();
+      const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+      const user = await prisma.user.upsert({
+        where: { email },
+        update: { name: body.name || undefined },
+        create: { email, name: body.name || null, passwordHash, role: 'client' },
+      });
+
+      const stripeSessionId = `coupon_${Date.now()}_${crypto.randomUUID()}`;
+
+      const created = await prisma.event.create({
+        data: {
+          clientId: user.id,
+          eventType: body.eventType,
+          eventDate: new Date(body.eventDate),
+          durationHours: body.durationHours,
+          vibeTags: body.vibeTags,
+          status: 'AWAITING_ASSIGNMENT',
+          order: {
+            create: {
+              stripeSessionId,
+              totalAmountCents: 0,
+              platformFeeCents: 0,
+              producerPayoutCents: 0,
+              paymentStatus: 'paid',
+              couponCode,
+            },
+          },
+          mix: { create: {} },
+        },
+        select: { id: true },
+      });
+
+      // Best-effort assignment
+      try {
+        await assignProducerToEvent(created.id);
+      } catch {
+        // ignore
+      }
+
+      return NextResponse.json({ ok: true, id: stripeSessionId, url: `${appUrl}/success?session_id=${stripeSessionId}` });
+    }
+  }
+
   const stripe = getStripe();
 
-  // If user provided a coupon code, try to auto-apply it via Stripe Promotion Codes.
-  // This keeps discounts in Stripe (no DB dependency) but still supports a typed-in code.
+  // Non-free checkouts go through Stripe. If you created a Stripe Promotion Code that matches
+  // the coupon code, we'll auto-apply it.
   let promotionCodeId: string | undefined;
   if (couponCode) {
     const promos = await stripe.promotionCodes.list({ code: couponCode, active: true, limit: 1 });
     promotionCodeId = promos.data[0]?.id;
-    if (!promotionCodeId) {
-      return NextResponse.json({ ok: false, error: 'Coupon code not found in Stripe.' }, { status: 400 });
-    }
   }
 
   const session = await stripe.checkout.sessions.create({
