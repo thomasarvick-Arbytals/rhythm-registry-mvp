@@ -1,24 +1,41 @@
-import Link from 'next/link';
+import { Btn, Card, DashboardShell } from '@/components/dashboard/Shell';
 import { requireRole } from '@/lib/require-role';
 
 export default async function DjHome() {
   await requireRole('dj');
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-2xl font-semibold">DJ</h1>
-      <p className="mt-2 text-sm text-neutral-600">Your jobs and progress actions.</p>
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <Link className="rounded border p-4 hover:bg-neutral-50" href="/dj/queue">
-          <div className="font-medium">Job Queue</div>
-          <div className="text-sm text-neutral-600">First-to-accept wins</div>
-        </Link>
-        <Link className="rounded border p-4 hover:bg-neutral-50" href="/dj/jobs">
-          <div className="font-medium">My Jobs</div>
-          <div className="text-sm text-neutral-600">Accepted and in progress</div>
-        </Link>
+    <DashboardShell
+      title="DJ"
+      subtitle="Your jobs and progress actions."
+      brand={{ title: 'Rhythm Registry — DJ', subtitle: 'MVP dashboard' }}
+      currentPath="/dj"
+      nav={[
+        { href: '/dj', label: 'Overview', code: '01' },
+        { href: '/dj/queue', label: 'Job Queue', code: '02', pill: 'First-to-accept' },
+        { href: '/dj/jobs', label: 'My Jobs', code: '03' },
+      ]}
+      note={
+        <>
+          <div className="font-semibold text-[#e9ecf5]">DJ rules</div>
+          <ul className="mt-2 list-disc pl-4">
+            <li>No client messaging</li>
+            <li>First-to-accept queue</li>
+            <li>Uploads are MVP placeholders</li>
+          </ul>
+        </>
+      }
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+        <Card title="Quick actions" className="md:col-span-12">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Btn href="/dj/queue" variant="primary">
+              Job Queue
+            </Btn>
+            <Btn href="/dj/jobs">My Jobs</Btn>
+          </div>
+        </Card>
       </div>
-    </main>
+    </DashboardShell>
   );
 }

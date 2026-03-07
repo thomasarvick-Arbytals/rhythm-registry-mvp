@@ -1,3 +1,4 @@
+import { Btn, Card, DashboardShell } from '@/components/dashboard/Shell';
 import { notFound } from 'next/navigation';
 import { requireRole } from '@/lib/require-role';
 import { prisma } from '@/lib/prisma';
@@ -16,38 +17,44 @@ export default async function DjUploadPage({ params }: { params: Promise<{ id: s
   const chapters = job.details.find((d) => d.key === 'chapters')?.value ?? '';
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="text-2xl font-semibold">Upload mix</h1>
-      <p className="mt-2 text-sm text-neutral-600">
-        MVP: upload is a placeholder (no storage yet). You can still save chapters (timestamps + track names).
-      </p>
+    <DashboardShell
+      title="Upload mix"
+      subtitle="MVP: upload is a placeholder (no storage yet). You can still save chapters (timestamps + track names)."
+      brand={{ title: 'Rhythm Registry — DJ', subtitle: 'MVP dashboard' }}
+      currentPath="/dj/jobs"
+      nav={[
+        { href: '/dj', label: 'Overview', code: '01' },
+        { href: '/dj/queue', label: 'Job Queue', code: '02', pill: 'First-to-accept' },
+        { href: '/dj/jobs', label: 'My Jobs', code: '03' },
+      ]}
+      actions={<Btn href={`/dj/jobs/${job.id}`}>Back</Btn>}
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+        <Card title="Chapters" className="md:col-span-12">
+          <form action="/api/dj/upload" method="post" className="space-y-3">
+            <input type="hidden" name="eventId" value={job.id} />
 
-      <div className="mt-6 rounded border p-4">
-        <form action="/api/dj/upload" method="post">
-          <input type="hidden" name="eventId" value={job.id} />
-
-          <label className="block">
-            <div className="text-sm font-medium">Chapters</div>
-            <div className="mt-1 text-xs text-neutral-600">Format: mm:ss - Track Name (one per line)</div>
+            <div className="text-xs text-[#aab1c6]">Format: mm:ss - Track Name (one per line)</div>
             <textarea
               name="chapters"
               defaultValue={chapters}
-              className="mt-2 w-full rounded border p-2 font-mono text-xs"
+              className="mt-1 w-full rounded-xl border border-white/10 bg-[rgba(15,19,32,.55)] p-3 font-mono text-xs text-[#aab1c6]"
               rows={10}
               placeholder="00:00 - Intro\n01:32 - Song A\n04:10 - Song B"
             />
-          </label>
 
-          <div className="mt-4 flex gap-2">
-            <button className="rounded bg-black px-4 py-2 text-white" type="submit">
-              Save chapters
-            </button>
-            <a className="rounded border px-4 py-2 hover:bg-neutral-50" href={`/dj/jobs/${job.id}`}>
-              Back
-            </a>
-          </div>
-        </form>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="rounded-xl border border-[rgba(96,165,250,.6)] bg-[rgba(96,165,250,.15)] px-4 py-2 text-sm"
+                type="submit"
+              >
+                Save chapters
+              </button>
+              <Btn href={`/dj/jobs/${job.id}`}>Back</Btn>
+            </div>
+          </form>
+        </Card>
       </div>
-    </main>
+    </DashboardShell>
   );
 }
