@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       const email = body.email.toLowerCase().trim();
 
       // Create or reuse user; set a temporary password hash so they must set it on success.
-      const tempPassword = crypto.randomUUID();
+      const tempPassword = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : require('crypto').randomUUID();
       const passwordHash = await bcrypt.hash(tempPassword, 10);
 
       const user = await prisma.user.upsert({
@@ -53,7 +53,8 @@ export async function POST(req: Request) {
         create: { email, name: body.name || null, passwordHash, role: 'client' },
       });
 
-      const stripeSessionId = `coupon_${Date.now()}_${crypto.randomUUID()}`;
+      const uuid = globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : require('crypto').randomUUID();
+      const stripeSessionId = `coupon_${Date.now()}_${uuid}`;
 
       const created = await prisma.event.create({
         data: {
