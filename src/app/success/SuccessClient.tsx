@@ -35,7 +35,8 @@ export default function SuccessClient() {
             body: JSON.stringify({ sessionId, password }),
           });
           if (!res.ok) {
-            setMsg('Could not set password. Please contact support.');
+            const text = await res.text().catch(() => '');
+            setMsg(text ? `Could not set password: ${text}` : 'Could not set password. Please contact support.');
             setLoading(false);
             return;
           }

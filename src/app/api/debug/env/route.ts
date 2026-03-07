@@ -15,6 +15,7 @@ export async function GET() {
     hasNextPublicAppUrl: Boolean(process.env.NEXT_PUBLIC_APP_URL),
     hasAppUrl: Boolean(process.env.APP_URL),
     hasStripeSecretKey: Boolean(process.env.STRIPE_SECRET_KEY),
+    hasStripeWebhookSecret: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
     nodeEnv: process.env.NODE_ENV,
   });
 }
