@@ -57,7 +57,16 @@ export default function StartPage() {
           });
 
           if (!res.ok) {
-            setError('Could not start checkout. Check server logs / env vars.');
+            const msg = await res
+              .json()
+              .then((j: unknown) => {
+                if (j && typeof j === 'object' && 'error' in j && typeof (j as { error?: unknown }).error === 'string') {
+                  return (j as { error: string }).error;
+                }
+                return JSON.stringify(j);
+              })
+              .catch(async () => await res.text());
+            setError(msg || 'Could not start checkout.');
             setLoading(false);
             return;
           }
@@ -122,7 +131,7 @@ export default function StartPage() {
             onChange={(e) => setCouponCode(e.target.value)}
             placeholder="e.g. TESTING"
           />
-          <div className="mt-1 text-xs text-neutral-500">If you have a promo code, enter it here.</div>
+          <div className="mt-1 text-xs text-neutral-500">Promo codes can also be entered on the Stripe checkout page.</div>
         </label>
 
         <div className="rounded border bg-neutral-50 p-4">

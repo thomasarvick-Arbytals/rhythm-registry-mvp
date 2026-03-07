@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { computePricing } from '@/lib/pricing';
 import { getStripe } from '@/lib/stripe';
-import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
 const BodySchema = z.object({
@@ -19,19 +18,13 @@ export async function POST(req: Request) {
   const json = await req.json();
   const body = BodySchema.parse(json);
 
-  // Optional coupon
-  let percentOff = 0;
-  const couponCode = (body.couponCode || '').trim().toUpperCase();
-  if (couponCode) {
-    const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
-    if (!coupon || !coupon.isActive) {
-      return NextResponse.json({ ok: false, error: 'Invalid coupon code.' }, { status: 400 });
-    }
-    percentOff = coupon.percentOff;
-  }
+  // Coupon handling:
+  // We let Stripe handle promotion codes at checkout (allow_promotion_codes: true).
+  // This avoids runtime failures if the DB/migrations aren't present in production.
+  const couponCode = (body.couponCode || '').trim().toUpperCase() || undefined;
 
   const pricing = computePricing({ durationHours: body.durationHours, rush: body.rush });
-  const discountedTotalCents = Math.max(0, Math.round(pricing.totalAmountCents * (1 - percentOff / 100)));
+  const totalAmountCents = pricing.totalAmountCents;
 
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
 
@@ -40,6 +33,7 @@ export async function POST(req: Request) {
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],
+    allow_promotion_codes: true,
     customer_email: body.email,
     line_items: [
       {
@@ -48,7 +42,7 @@ export async function POST(req: Request) {
           product_data: {
             name: `Rhythm Registry – ${body.durationHours} Hour Event Mix`,
           },
-          unit_amount: discountedTotalCents,
+          unit_amount: totalAmountCents,
         },
         quantity: 1,
       },
@@ -60,8 +54,7 @@ export async function POST(req: Request) {
       vibeTags: body.vibeTags.join(','),
       rush: String(body.rush),
       clientName: body.name ?? '',
-      couponCode,
-      couponPercentOff: String(percentOff),
+      couponCode: couponCode ?? '',
       platformFeeCents: String(pricing.platformFeeCents),
       producerPayoutCents: String(pricing.producerPayoutCents),
     },
