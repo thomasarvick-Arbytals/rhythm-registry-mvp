@@ -13,6 +13,8 @@ export async function GET() {
     hasNextAuthSecret: Boolean(process.env.NEXTAUTH_SECRET),
     hasNextAuthUrl: Boolean(process.env.NEXTAUTH_URL),
     hasNextPublicAppUrl: Boolean(process.env.NEXT_PUBLIC_APP_URL),
+    hasAppUrl: Boolean(process.env.APP_URL),
+    hasStripeSecretKey: Boolean(process.env.STRIPE_SECRET_KEY),
     nodeEnv: process.env.NODE_ENV,
   });
 }
