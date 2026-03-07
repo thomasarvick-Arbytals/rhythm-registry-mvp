@@ -8,11 +8,11 @@ function getSecret() {
   return encoder.encode(secret);
 }
 
-export async function signResetToken(payload: { userId: string }, expiresInSeconds = 60 * 60) {
+export async function signResetToken(payload: { sub: string }, expiresInSeconds = 60 * 60) {
   const now = Math.floor(Date.now() / 1000);
   return await new SignJWT({})
     .setProtectedHeader({ alg: 'HS256' })
-    .setSubject(payload.userId)
+    .setSubject(payload.sub)
     .setIssuedAt(now)
     .setExpirationTime(now + expiresInSeconds)
     .sign(getSecret());
@@ -20,7 +20,7 @@ export async function signResetToken(payload: { userId: string }, expiresInSecon
 
 export async function verifyResetToken(token: string) {
   const { payload } = await jwtVerify(token, getSecret());
-  const userId = payload.sub;
-  if (!userId || typeof userId !== 'string') throw new Error('Invalid token');
-  return { userId };
+  const sub = payload.sub;
+  if (!sub || typeof sub !== 'string') throw new Error('Invalid token');
+  return { sub };
 }

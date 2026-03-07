@@ -14,15 +14,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: 'Invalid request.' }, { status: 400 });
   }
 
-  let userId = '';
+  let sub = '';
   try {
-    userId = (await verifyResetToken(token)).userId;
+    sub = (await verifyResetToken(token)).sub;
   } catch {
     return NextResponse.json({ ok: false, error: 'Invalid or expired token.' }, { status: 400 });
   }
 
   const hash = await bcrypt.hash(password, 10);
-  await prisma.user.update({ where: { id: userId }, data: { passwordHash: hash } });
+
+  // Support both userId (uuid) and email subjects.
+  const where = sub.includes('@') ? ({ email: sub } as const) : ({ id: sub } as const);
+  await prisma.user.update({ where, data: { passwordHash: hash } });
 
   return NextResponse.json({ ok: true });
 }

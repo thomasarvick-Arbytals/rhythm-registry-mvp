@@ -61,6 +61,40 @@ export async function POST(req: Request) {
   const ip = getClientIp(req);
   const ua = req.headers.get('user-agent');
 
+  // Determine base URL for links.
+  const xfProto = req.headers.get('x-forwarded-proto');
+  const xfHost = req.headers.get('x-forwarded-host');
+  const host = xfHost || req.headers.get('host');
+  const proto = xfProto || (host?.includes('localhost') ? 'http' : 'https');
+  const headerOrigin = req.headers.get('origin');
+
+  const appUrl =
+    process.env.NEXTAUTH_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    headerOrigin ||
+    (host ? `${proto}://${host}` : 'http://localhost:3000');
+
+  // Email service configuration
+  const from = process.env.RESEND_FROM;
+  const hasResendKey = Boolean(process.env.RESEND_API_KEY);
+
+  // If email isn't configured, provide a temporary fallback for internal arbytals.com.au accounts
+  // so admins can unblock password resets while env is being fixed.
+  if (!from || !hasResendKey) {
+    const isInternal = email.toLowerCase().endsWith('@arbytals.com.au');
+    if (isInternal) {
+      const raw = await signResetToken({ sub: email.toLowerCase() }, 60 * 60);
+      const resetUrl = `${appUrl.replace(/\/$/, '')}/reset-password?token=${raw}`;
+      return NextResponse.json({ ok: true, resetUrl });
+    }
+
+    // Generic error for non-internal accounts.
+    return NextResponse.json(
+      { ok: false, error: 'Email service is not configured. Please contact support.' },
+      { status: 500 }
+    );
+  }
+
   // If user doesn't exist, still return ok.
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) return okResponse;
@@ -75,41 +109,10 @@ export async function POST(req: Request) {
   }
 
   // Stateless reset token (JWT) so we don't depend on DB migrations.
-  const raw = await signResetToken({ userId: user.id }, 60 * 60);
-
-  // Determine base URL for links.
-  const xfProto = req.headers.get('x-forwarded-proto');
-  const xfHost = req.headers.get('x-forwarded-host');
-  const host = xfHost || req.headers.get('host');
-  const proto = xfProto || (host?.includes('localhost') ? 'http' : 'https');
-  const headerOrigin = req.headers.get('origin');
-
-  const appUrl =
-    process.env.NEXTAUTH_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    headerOrigin ||
-    (host ? `${proto}://${host}` : 'http://localhost:3000');
+  // We use `sub` so we can later evolve between userId/email-based subjects.
+  const raw = await signResetToken({ sub: user.id }, 60 * 60);
 
   const resetUrl = `${appUrl.replace(/\/$/, '')}/reset-password?token=${raw}`;
-
-  // Email service configuration
-  const from = process.env.RESEND_FROM;
-  const hasResendKey = Boolean(process.env.RESEND_API_KEY);
-
-  // If email isn't configured, provide a temporary fallback for internal arbytals.com.au accounts
-  // so admins can unblock password resets while env is being fixed.
-  if (!from || !hasResendKey) {
-    const isInternal = email.toLowerCase().endsWith('@arbytals.com.au');
-    if (isInternal) {
-      return NextResponse.json({ ok: true, resetUrl });
-    }
-
-    // Generic error for non-internal accounts.
-    return NextResponse.json(
-      { ok: false, error: 'Email service is not configured. Please contact support.' },
-      { status: 500 }
-    );
-  }
 
   const resend = getResend();
   try {
