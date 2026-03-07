@@ -30,10 +30,22 @@ export async function POST(req: Request) {
 
   const stripe = getStripe();
 
+  // If user provided a coupon code, try to auto-apply it via Stripe Promotion Codes.
+  // This keeps discounts in Stripe (no DB dependency) but still supports a typed-in code.
+  let promotionCodeId: string | undefined;
+  if (couponCode) {
+    const promos = await stripe.promotionCodes.list({ code: couponCode, active: true, limit: 1 });
+    promotionCodeId = promos.data[0]?.id;
+    if (!promotionCodeId) {
+      return NextResponse.json({ ok: false, error: 'Coupon code not found in Stripe.' }, { status: 400 });
+    }
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     payment_method_types: ['card'],
     allow_promotion_codes: true,
+    discounts: promotionCodeId ? [{ promotion_code: promotionCodeId }] : undefined,
     customer_email: body.email,
     line_items: [
       {
