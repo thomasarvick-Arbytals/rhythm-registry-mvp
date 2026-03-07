@@ -1,119 +1,153 @@
-'use client';
+import { Btn, Card, DashboardShell, Badge } from '@/components/dashboard/Shell';
+import { requireRole } from '@/lib/require-role';
+import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
 
-import { useEffect, useState } from 'react';
+async function createCoupon(formData: FormData) {
+  'use server';
 
-type Coupon = { id: string; code: string; percentOff: number; isActive: boolean; createdAt: string };
+  await requireRole('admin');
 
-export default function AdminCouponsPage() {
-  const [code, setCode] = useState('');
-  const [percentOff, setPercentOff] = useState(100);
-  const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const code = String(formData.get('code') || '')
+    .trim()
+    .toUpperCase();
+  const percentOff = Number(formData.get('percentOff') || 0);
 
-  async function refresh() {
-    const res = await fetch('/api/admin/coupons');
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    setCoupons(data.coupons);
-  }
+  if (!code) throw new Error('Missing code');
+  if (Number.isNaN(percentOff) || percentOff < 0 || percentOff > 100) throw new Error('Invalid percent');
 
-  useEffect(() => {
-    refresh().catch((e) => setError(String(e)));
-  }, []);
+  await prisma.coupon.upsert({
+    where: { code },
+    update: { percentOff, isActive: true },
+    create: { code, percentOff, isActive: true },
+  });
+
+  revalidatePath('/admin/coupons');
+}
+
+async function toggleCoupon(formData: FormData) {
+  'use server';
+
+  await requireRole('admin');
+
+  const id = String(formData.get('id') || '').trim();
+  const isActive = String(formData.get('isActive') || '') === 'true';
+  if (!id) throw new Error('Missing id');
+
+  await prisma.coupon.update({ where: { id }, data: { isActive } });
+  revalidatePath('/admin/coupons');
+}
+
+export default async function AdminCouponsPage() {
+  await requireRole('admin');
+
+  const coupons = await prisma.coupon.findMany({ orderBy: { createdAt: 'desc' } });
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-2xl font-semibold">Coupons</h1>
-      <p className="mt-2 text-sm text-neutral-600">Create coupons for testing checkout without Stripe.</p>
+    <DashboardShell
+      title="Coupons"
+      subtitle="Create coupons for testing checkout without Stripe (admin-only)."
+      brand={{ title: 'Rhythm Registry — Admin', subtitle: 'Desktop dashboard' }}
+      currentPath="/admin/coupons"
+      nav={[
+        { href: '/admin', label: 'Overview', code: '01' },
+        { href: '/admin/jobs', label: 'Jobs', code: '02' },
+        { href: '/admin/djs', label: 'DJ Approvals', code: '03' },
+        { href: '/admin/coupons', label: 'Coupons', code: '04' },
+        { href: '/admin/change-requests', label: 'Change Requests', code: '05' },
+      ]}
+      actions={<Btn href="/admin">Back</Btn>}
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
+        <Card title="Create coupon" className="md:col-span-12">
+          <form action={createCoupon} className="grid gap-3 sm:grid-cols-3">
+            <label className="block">
+              <div className="text-sm font-medium">Code</div>
+              <input
+                className="mt-1 w-full rounded-xl border border-white/10 bg-[rgba(15,19,32,.55)] px-3 py-2 text-sm"
+                name="code"
+                placeholder="TESTING"
+                required
+              />
+            </label>
 
-      {error ? <div className="mt-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
+            <label className="block">
+              <div className="text-sm font-medium">% off</div>
+              <input
+                className="mt-1 w-full rounded-xl border border-white/10 bg-[rgba(15,19,32,.55)] px-3 py-2 text-sm"
+                name="percentOff"
+                type="number"
+                min={0}
+                max={100}
+                defaultValue={100}
+                required
+              />
+            </label>
 
-      <form
-        className="mt-6 grid gap-3 rounded border p-4 sm:grid-cols-3"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setLoading(true);
-          setError(null);
-          try {
-            const res = await fetch('/api/admin/coupons', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code, percentOff }),
-            });
-            if (!res.ok) throw new Error(await res.text());
-            setCode('');
-            setPercentOff(100);
-            await refresh();
-          } catch (e) {
-            setError(String(e));
-          } finally {
-            setLoading(false);
-          }
-        }}
-      >
-        <label className="block">
-          <div className="text-sm font-medium">Code</div>
-          <input className="mt-1 w-full rounded border px-3 py-2" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} />
-        </label>
-        <label className="block">
-          <div className="text-sm font-medium">% off</div>
-          <input
-            className="mt-1 w-full rounded border px-3 py-2"
-            type="number"
-            min={0}
-            max={100}
-            value={percentOff}
-            onChange={(e) => setPercentOff(Number(e.target.value))}
-          />
-        </label>
-        <div className="flex items-end">
-          <button className="w-full rounded bg-black px-4 py-2 text-white disabled:opacity-60" disabled={loading} type="submit">
-            {loading ? 'Creating…' : 'Create'}
-          </button>
-        </div>
-      </form>
+            <div className="flex items-end">
+              <button
+                className="w-full rounded-xl border border-[rgba(96,165,250,.6)] bg-[rgba(96,165,250,.15)] px-4 py-2 text-sm"
+                type="submit"
+              >
+                Create / Update
+              </button>
+            </div>
+          </form>
+        </Card>
 
-      <div className="mt-8 overflow-hidden rounded border">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-neutral-50">
-            <tr>
-              <th className="p-3">Code</th>
-              <th className="p-3">% off</th>
-              <th className="p-3">Active</th>
-              <th className="p-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {coupons.map((c) => (
-              <tr key={c.id} className="border-t">
-                <td className="p-3 font-mono">{c.code}</td>
-                <td className="p-3">{c.percentOff}%</td>
-                <td className="p-3">{c.isActive ? 'Yes' : 'No'}</td>
-                <td className="p-3">
-                  <button
-                    className="rounded border px-3 py-1 hover:bg-neutral-50"
-                    onClick={async () => {
-                      const res = await fetch('/api/admin/coupons/toggle', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: c.id, isActive: !c.isActive }),
-                      });
-                      if (!res.ok) {
-                        setError(await res.text());
-                        return;
-                      }
-                      await refresh();
-                    }}
-                  >
-                    {c.isActive ? 'Deactivate' : 'Activate'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Card title={`Coupons (${coupons.length})`} className="md:col-span-12">
+          <div className="overflow-hidden rounded-xl border border-white/10">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[rgba(15,19,32,.55)] text-xs text-[#aab1c6]">
+                <tr>
+                  <th className="p-3">Code</th>
+                  <th className="p-3">% off</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {coupons.map((c) => (
+                  <tr key={c.id} className="border-t border-white/10">
+                    <td className="p-3 font-mono">{c.code}</td>
+                    <td className="p-3">{c.percentOff}%</td>
+                    <td className="p-3">
+                      <Badge variant={c.isActive ? 'good' : 'warn'}>{c.isActive ? 'Active' : 'Inactive'}</Badge>
+                    </td>
+                    <td className="p-3">
+                      <form action={toggleCoupon}>
+                        <input type="hidden" name="id" value={c.id} />
+                        <input type="hidden" name="isActive" value={String(!c.isActive)} />
+                        <button
+                          className="rounded-xl border border-white/10 bg-[rgba(15,19,32,.55)] px-3 py-1 text-sm hover:bg-[rgba(15,19,32,.75)]"
+                          type="submit"
+                        >
+                          {c.isActive ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+
+                {coupons.length === 0 ? (
+                  <tr>
+                    <td className="p-3 text-sm text-[#aab1c6]" colSpan={4}>
+                      No coupons yet.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <Card title="Notes" className="md:col-span-12">
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="info">Coupons apply in API (not Stripe)</Badge>
+            <Badge variant="good">100% off bypasses Stripe</Badge>
+          </div>
+        </Card>
       </div>
-    </main>
+    </DashboardShell>
   );
 }
