@@ -54,6 +54,8 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }: any) {
+      // Be defensive: in some edge cases `session.user` can be undefined.
+      session.user = session.user ?? ({} as any);
       session.user.id = token.id as string;
       session.user.role = token.role as 'client' | 'dj' | 'admin';
       return session;
